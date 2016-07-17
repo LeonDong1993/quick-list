@@ -1,3 +1,10 @@
+*.cbp
+*.layout
+*.depend
+!*.c
+!*.h
+!Makefile
+
 # Object files
 *.o
 *.ko

@@ -1,0 +1,152 @@
+/**=============================================================
+parsing function area
+*=============================================================*/
+
+void exec_sql(char *sql_str)
+{
+    SQL *sql=sql_parse(sql_str);
+    if(SQL_PARSE_ERROR==sql)
+    {
+        printf("parsing error!!\n");
+        return;
+    }
+    switch(sql->op)
+    {
+    case SELECT:
+        f_search(sql->key);
+        break;
+    case SELECT_RANGE:
+        f_range_search(sql->key,sql->key_r);
+        break;
+    case DELETE:
+        f_delete(sql->key);
+        break;
+    case INSERT:
+        f_insert(sql->key);
+        break;
+    }
+}
+
+
+key_t get_key(char *str)
+{
+    key_t key_value=0;
+    while (  ('\0'!=*str) && (' '!=*str) && (','!=*str))
+    {
+        key_t cur_value=(key_t)(*str);
+        if(cur_value<48 || cur_value> 57)
+            return GET_KEY_ERROR;
+        key_value=key_value*10;
+        key_value+=cur_value-48;
+        str++;
+    }
+    return key_value;
+}
+
+
+SQL *sql_parse(char *sql_str)
+{
+    char *tmp_pos1;//用于备份tmp_pos
+    char sp[20];//用于把数字转换为字符串
+    SQL *cur_sql=(SQL *)calloc(1,sizeof(struct sql_instance));
+    if ( NULL!=strstr(sql_str,"select") )
+    {
+        char *tmp_pos=strstr(sql_str,"where");
+        //cur_sql->op=SELECT;
+
+        if(NULL==tmp_pos)
+        {
+            return SQL_PARSE_ERROR;
+        }
+        else
+        {
+            tmp_pos=strstr(tmp_pos,KEY_STR);
+            tmp_pos1=tmp_pos;
+            if(NULL==tmp_pos)
+            {
+                return SQL_PARSE_ERROR;
+            }
+            else
+            {
+                tmp_pos=strstr(tmp_pos,"between");//是否有between
+                if (NULL==tmp_pos)//若没有between则是select
+                {
+
+                    tmp_pos1+=strlen(KEY_STR)+1;
+                    key_t key_val=get_key(tmp_pos1);
+                    cur_sql->op=SELECT;
+                    cur_sql->key=key_val;
+                    if (GET_KEY_ERROR==key_val)
+                    {
+                        return SQL_PARSE_ERROR;
+                    }
+                    return cur_sql;
+                }
+                //如果有between，则继续解析
+                else
+                {
+                    cur_sql->op=SELECT_RANGE;
+                    tmp_pos+=8;//between+1
+                    tmp_pos1=tmp_pos;
+                    key_t key_val_s=get_key(tmp_pos1);//key_val_s表示较小的那个数
+                    if (GET_KEY_ERROR==key_val_s)
+                    {
+                        return SQL_PARSE_ERROR;
+                    }
+                    cur_sql->key=key_val_s;
+                    itoa(key_val_s,sp,10);//把key_val_s转换成字符串来计算长度   _itoa_s
+                    tmp_pos+=strlen(sp)+5;//"数字长度 and "才到下一个数字
+                    key_t key_val_b=get_key(tmp_pos);//key_val_b表示较大的那个数
+                    if (GET_KEY_ERROR==key_val_s)
+                    {
+                        return SQL_PARSE_ERROR;
+                    }
+                    cur_sql->key_r=key_val_b;
+                    return cur_sql;
+                }
+                //printf("%d\n",key_val);
+            }
+        }
+    }
+    else if(NULL!=strstr(sql_str,"insert"))
+    {
+        cur_sql->op=INSERT;
+        char *tmp_pos=strstr(sql_str,"values");
+        if(NULL==tmp_pos)
+        {
+            return SQL_PARSE_ERROR;
+        }
+        else
+        {
+            tmp_pos+=7;
+            //printf("%s\n",tmp_pos);
+            key_t key_val=get_key(tmp_pos);
+            if (GET_KEY_ERROR==key_val)
+            {
+                return SQL_PARSE_ERROR;
+            }
+            //printf("%d\n",key_val);
+            return cur_sql;
+        }
+    }
+    else if(NULL!=strstr(sql_str,"delete"))
+    {
+        cur_sql->op=DELETE;
+        char *tmp_pos=strstr(sql_str,"where");
+        if(NULL!=tmp_pos)
+        {
+            tmp_pos=strstr(tmp_pos,KEY_STR);
+            if(NULL!=tmp_pos)
+            {
+                tmp_pos+=strlen(KEY_STR)+1;
+                //printf("%d\n",tmp_pos);
+                key_t key_val=get_key(tmp_pos);
+                if (GET_KEY_ERROR!=key_val)
+                {
+                    return cur_sql;
+                }
+            }
+        }
+    }
+    return SQL_PARSE_ERROR;
+}

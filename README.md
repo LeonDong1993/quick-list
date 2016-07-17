@@ -1,2 +1,2 @@
-# fast-array
-a fast array-like structure for me to do some experiment
+# fast-list
+a list-like structure for me to do some experiment
