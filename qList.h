@@ -4,7 +4,9 @@
     version:    0.1
 */
 /*
-    ideas : nulti-braids qlist
+    ideas : 
+    multi-braids qlist perfromance test --> multi-braids bpTree
+    borrow elements
 */
 
 #ifndef _QLIST_H
