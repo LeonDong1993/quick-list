@@ -62,7 +62,6 @@ void user_command(Qlist *ql)
             return;
         }
         exec_command(ql,op,k1,k2);
-        //exec_command(ql,'o',0,0);
     }
 }
 
@@ -111,6 +110,52 @@ void print_qlist(Qlist *ql)
     }
 }
 
+long read_data_with_op(FILE *fp,key_type *buf,long length)
+{
+    if(NULL==buf) {
+        fprintf(stderr,"$$ buffer is not exist\n");
+        exit(0);
+    }
+    char op;
+    key_type key=0;
+    long count=0;
+    while(count<length) {
+        fscanf(fp,"%c %ld\n",&op,&key);
+        buf[count++]=key;
+    }
+    return count;
+}
+long read_data_without_op(FILE *fp,key_type *buf,long length)
+{
+    if(NULL==buf) {
+        fprintf(stderr,"$$ buffer is not exist\n");
+        exit(0);
+    }
+    key_type key=0;
+    long count=0;
+    while(count<length) {
+        fscanf(fp,"%ld\n",&key);
+        buf[count++]=key;
+    }
+    return count;
+}
+
+void build_index(Qlist *ql,char *file,size_type size)
+{
+    len_type i;
+    FILE *fp=fopen(file,"r");
+    if(NULL==fp) {
+        printf("no such file\n");
+        exit(-1);
+    }
+    key_type *buf=(key_type*)malloc(size*sizeof(key_type));
+    len_type read_len=read_data_without_op(fp,buf,size);
+    for(i=0; i<read_len; i++) {
+        exec_command(ql,'i',buf[i],0);
+    }
+    free(buf);
+}
+
 ///=========CORE FUNCTION========///
 
 
@@ -131,32 +176,25 @@ inline Qlist *init_qlist(len_type len)
     return ql;
 }
 
-static len_type bin_search_node(Qlist *ql,key_type key)
+static len_type bin_search_node(Qlist *ql,key_type target)
 {
-    if(ql->used == 0){
+    len_type len=ql->used;
+    if (len == 0 ){
         return -1;
-    }else if (ql->used == 1){
-        if (key >= ql->ikey[0]){
-            return 1;
-        }else{
-            return 0;
-        }
     }
-    len_type low=0,high=ql->used-1,mid=0;
-    while(low <= high){
-        mid=(low+high)>>1;
-        if (ql->ikey[mid]>key){
-            low = mid+1;
-        }else if(ql->ikey[mid]< key ){
-            high = mid-1;
+    len_type low = -1;
+    len_type high = len, mid=0;
+    while (low + 1 < high) {
+        mid = low + (high - low) / 2;
+        if (target > ql->ikey[mid]) {
+            low = mid;
+        } else if (target < ql->ikey[mid]){
+            high = mid;
         }else{
             return mid+1;
         }
     }
-    /*if(ql->ikey[low] <= key && low < ql->used){
-        low++;
-    }*/
-    return low;
+    return high;
 }
 
 /*
@@ -216,8 +254,8 @@ static int qlist_split(Qlist *ql,len_type node_pos)
 	// insert this new node to qlist
 	double rate= ( (double)ql->used / ql->length );
 	if( (rate > 0.95 && node_pos < ( ql->used >>1 )) || (ql->used==ql->length) ){
-        printf("INFO: realloc quick list space \n");
         len_type extend_len=ql->length+(len_type)(ql->length/log10(ql->length));
+        printf("INFO: realloc quick list space at %ld\n",extend_len);
         key_type *ikey=(key_type *)malloc(sizeof(key_type)*extend_len);
         Node **nodes=(Node **)malloc(sizeof(Node *)*extend_len);
         //move index key
@@ -228,19 +266,18 @@ static int qlist_split(Qlist *ql,len_type node_pos)
         memcpy(nodes,ql->nodes,(node_pos+1)*sizeof(Node *));
         nodes[node_pos+1]=n;
         memcpy(nodes+node_pos+2,ql->nodes+node_pos+1,(ql->used-node_pos)*sizeof(Node *));
-        ql->used++;
-        ql->length=extend_len;
         free(ql->nodes);
         free(ql->ikey);
-        ql->ikey =ikey;
+        ql->used++;
+        ql->length=extend_len;
+        ql->ikey = ikey;
         ql->nodes = nodes;
 	}else{
         memmove(ql->ikey+node_pos+1,ql->ikey+node_pos,(ql->used-node_pos)*sizeof(key_type));
         ql->ikey[node_pos]=median;
-        memmove(ql->nodes+node_pos+2,ql->ikey+node_pos+1,(ql->used-node_pos)*sizeof(key_type));
+        memmove(ql->nodes+node_pos+2,ql->nodes+node_pos+1,(ql->used-node_pos)*sizeof(Node *));
         ql->nodes[node_pos+1]=n;
         ql->used++;
-
 	}
 	return 0;
 }

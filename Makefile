@@ -3,7 +3,7 @@
 # CFLAGS  := -Werror -g -Wno-format
 CFLAGS  := -g
 LD      := gcc
-LDFLAGS := ${LDFLAGS}
+LDFLAGS := ${LDFLAGS} -lm
 
 APPS    := qList 
 

@@ -1,6 +1,7 @@
 *.cbp
 *.layout
 *.depend
+bin
 !*.c
 !*.h
 !Makefile

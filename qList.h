@@ -7,7 +7,7 @@
 
 #ifndef _QLIST_H
 #define _QLIST_H
-#define ENTRIES 4
+#define ENTRIES 255
 
 typedef long key_type;
 typedef long len_type;
@@ -35,6 +35,9 @@ inline Qlist *init_qlist(len_type len);
 int qlist_insert(Qlist *ql,key_type key,void *data_ptr);
 int qlist_delete(Qlist *ql,key_type key);
 int qlist_search(Qlist *ql,key_type key);
+///-------------------------------------///
+inline void show_stat_info();
+void build_index(Qlist *ql,char *file,size_type size);
 inline void exec_command(Qlist *ql,char op,key_type k1,key_type k2);
 void run_assert_file(Qlist *ql,char *file);
 void user_command(Qlist *ql);
